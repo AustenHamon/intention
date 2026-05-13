@@ -8,6 +8,7 @@ import '../../../shared/widgets/glass_container.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/app_usage_card.dart';
 import '../widgets/stat_card.dart';
+import '../../../shared/widgets/bottom_nav_bar.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -303,12 +304,7 @@ SliverToBoxAdapter(
           ),
 
           // Bottom nav bar
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _BottomNavBar(currentIndex: 0),
-          ),
+          BottomNavBar(currentIndex: 0),
         ],
       ),
     );
@@ -372,95 +368,3 @@ class _OverallRing extends StatelessWidget {
   }
 }
 
-class _BottomNavBar extends StatelessWidget {
-  final int currentIndex;
-  const _BottomNavBar({required this.currentIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        borderRadius: BorderRadius.circular(28),
-        blur: 30,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                isActive: currentIndex == 0,
-                onTap: () => context.go('/dashboard')),
-            _NavItem(
-                icon: Icons.shield_rounded,
-                label: 'Limits',
-                isActive: currentIndex == 1,
-                onTap: () => context.go('/app-limits')),
-            _NavItem(
-                icon: Icons.bar_chart_rounded,
-                label: 'Stats',
-                isActive: currentIndex == 2,
-                onTap: () {}),
-            _NavItem(
-                icon: Icons.settings_rounded,
-                label: 'Settings',
-                isActive: currentIndex == 3,
-                onTap: () {}),
-          ],
-        ),
-      ),
-    ).animate().slideY(begin: 1, duration: 600.ms, curve: Curves.easeOut);
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isActive
-              ? AppColors.neonBlue.withOpacity(0.2)
-              : Colors.transparent,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                color: isActive
-                    ? AppColors.neonBlue
-                    : Colors.white.withOpacity(0.4),
-                size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: isActive
-                    ? AppColors.neonBlue
-                    : Colors.white.withOpacity(0.4),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -6,6 +6,8 @@ import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/app_limits/screens/app_limits_screen.dart';
 import '../../features/cooling_ladder/screens/cooling_ladder_screen.dart';
 import '../../core/constants/app_constants.dart';
+import '../../features/stats/screens/stats_screen.dart';
+import '../../features/settings/screens/settings_screen.dart';
 
 class AppRouter {
   static Future<String> _getInitialRoute() async {
@@ -50,6 +52,14 @@ class AppRouter {
               );
             },
           ),
+          GoRoute(
+            path: '/stats',
+            builder: (context, state) => const StatsScreen(),
+          ),
+          GoRoute( 
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen(),  
+          )
         ],
       );
 }
