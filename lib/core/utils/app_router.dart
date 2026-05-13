@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/app_limits/screens/app_limits_screen.dart';
+import '../../features/cooling_ladder/screens/cooling_ladder_screen.dart';
 import '../../core/constants/app_constants.dart';
 
 class AppRouter {
@@ -36,6 +37,18 @@ class AppRouter {
           GoRoute(
             path: '/app-limits',
             builder: (context, state) => const AppLimitsScreen(),
+          ),
+          GoRoute(
+            path: '/cooling-ladder',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return CoolingLadderScreen(
+                packageName: extra['packageName'] as String,
+                appName: extra['appName'] as String,
+                appEmoji: extra['appEmoji'] as String,
+                overrideCount: extra['overrideCount'] as int,
+              );
+            },
           ),
         ],
       );

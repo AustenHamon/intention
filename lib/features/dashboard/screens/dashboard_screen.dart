@@ -99,17 +99,29 @@ class _DashboardView extends StatelessWidget {
                                     begin: -0.2, duration: 500.ms),
 
                                 // Settings button
-                                GlassContainer(
-                                  width: 48,
-                                  height: 48,
-                                  padding: EdgeInsets.zero,
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: const Icon(
-                                    Icons.tune_rounded,
-                                    color: Colors.white,
-                                    size: 22,
-                                  ),
-                                ).animate().fadeIn(duration: 500.ms),
+                                // Settings button
+GestureDetector(
+  onTap: () => context.go(
+    '/cooling-ladder',
+    extra: {
+      'packageName': 'com.instagram.android',
+      'appName': 'Instagram',
+      'appEmoji': '📸',
+      'overrideCount': 0,
+    },
+  ),
+  child: GlassContainer(
+    width: 48,
+    height: 48,
+    padding: EdgeInsets.zero,
+    borderRadius: BorderRadius.circular(16),
+    child: const Icon(
+      Icons.play_circle_outline_rounded,
+      color: Colors.white,
+      size: 22,
+    ),
+  ),
+).animate().fadeIn(duration: 500.ms),
                               ],
                             ),
                           ),
