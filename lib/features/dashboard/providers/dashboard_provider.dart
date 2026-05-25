@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/app_limit.dart';
 import '../../../data/repositories/app_limits_repository.dart';
+import '../../../core/services/usage_stats_service.dart';
 
 class DashboardProvider extends ChangeNotifier {
   final AppLimitsRepository _repository = AppLimitsRepository();
@@ -34,43 +35,53 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   Future<void> loadData() async {
-    _isLoading = true;
-    notifyListeners();
+  _isLoading = true;
+  notifyListeners();
 
-    // Load from DB
-    _appLimits = await _repository.getAppLimits();
+  // Check permission
+  final hasPermission = await UsageStatsService.hasPermission();
 
-    // Simulate some usage data for demo purposes
-    if (_appLimits.isNotEmpty) {
-      _appLimits = _appLimits.map((app) {
-        final demoUsage = <String, int>{
-          'com.zhiliaoapp.musically': 45,
-          'com.instagram.android': 28,
-          'com.twitter.android': 12,
-          'com.google.android.youtube': 67,
-          'com.facebook.katana': 8,
-        };
-        return app.copyWith(
-          usedMinutesToday: demoUsage[app.packageName] ?? 0,
-        );
-      }).toList();
-    }
+  // Load limits from DB
+  _appLimits = await _repository.getAppLimits();
 
-    _isLoading = false;
-    notifyListeners();
+  if (hasPermission && _appLimits.isNotEmpty) {
+    // Get real usage data
+    final packages = _appLimits.map((a) => a.packageName).toList();
+    final realUsage = await UsageStatsService.getUsageForPackages(packages);
+
+    _appLimits = _appLimits.map((app) {
+      return app.copyWith(
+        usedMinutesToday: realUsage[app.packageName] ?? 0,
+      );
+    }).toList();
+  } else if (_appLimits.isNotEmpty) {
+    // Fallback demo data if no permission
+    _appLimits = _appLimits.map((app) {
+      final demoUsage = <String, int>{
+        'com.zhiliaoapp.musically': 45,
+        'com.instagram.android': 28,
+        'com.twitter.android': 12,
+        'com.google.android.youtube': 67,
+        'com.facebook.katana': 8,
+      };
+      return app.copyWith(
+        usedMinutesToday: demoUsage[app.packageName] ?? 0,
+      );
+    }).toList();
+  }
+
+  _isLoading = false;
+  notifyListeners();
   }
 
   Future<void> toggleApp(String packageName) async {
-    final index =
-        _appLimits.indexWhere((a) => a.packageName == packageName);
-    if (index == -1) return;
-
-    final updated =
-        _appLimits[index].copyWith(isEnabled: !_appLimits[index].isEnabled);
-    _appLimits[index] = updated;
-    await _repository.updateAppLimit(updated);
-    notifyListeners();
-  }
-
-  Future<void> refresh() async => loadData();
+  final index =
+      _appLimits.indexWhere((a) => a.packageName == packageName);
+  if (index == -1) return;
+  final updated =
+      _appLimits[index].copyWith(isEnabled: !_appLimits[index].isEnabled);
+  _appLimits[index] = updated;
+  await _repository.updateAppLimit(updated);
+  notifyListeners();
+}
 }

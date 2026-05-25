@@ -1,4 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+     <!-- Usage Stats Permission -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+         tools:ignore="ProtectedPermissions" />
+
+     <!-- Query installed apps -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+         tools:ignore="QueryAllPackages" />
+
     <application
         android:label="intention"
         android:name="${applicationName}"

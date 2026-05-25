@@ -109,3 +109,8 @@ lib/
 All data is stored locally on device via SQLite.
 No accounts, no cloud sync, no analytics, no ads.
 POPIA compliant by design.
+
+
+## FIX
+- Fix the dashboard screen onToggle method
+- Fix getInstalledApps parameters on usage stats

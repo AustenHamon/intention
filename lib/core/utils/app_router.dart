@@ -8,6 +8,8 @@ import '../../features/cooling_ladder/screens/cooling_ladder_screen.dart';
 import '../../core/constants/app_constants.dart';
 import '../../features/stats/screens/stats_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/onboarding/screens/permission_screen.dart';
+import '../../features/onboarding/screens/app_picker_screen.dart';
 
 class AppRouter {
   static Future<String> _getInitialRoute() async {
@@ -59,6 +61,14 @@ class AppRouter {
           GoRoute( 
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),  
+          ),
+          GoRoute(
+            path: '/permission',
+            builder: (context, state) => const PermissionScreen(),
+          ),
+          GoRoute(
+            path: '/app-picker',
+            builder: (context, state) => const AppPickerScreen(),
           )
         ],
       );

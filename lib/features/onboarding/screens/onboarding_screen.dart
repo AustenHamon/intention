@@ -46,11 +46,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
-  Future<void> _completeOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppConstants.onboardingCompleteKey, true);
-    if (mounted) context.go('/dashboard');
-  }
+Future<void> _completeOnboarding() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(AppConstants.onboardingCompleteKey, true);
+  if (mounted) context.go('/permission');
+}
 
   void _nextPage() {
     if (_currentPage < _pages.length - 1) {

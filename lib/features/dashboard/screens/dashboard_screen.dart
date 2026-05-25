@@ -74,7 +74,8 @@ class _DashboardView extends StatelessWidget {
             child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
-                    onRefresh: provider.refresh,
+                    onRefresh: provider.loadData,
+                    //onRefresh: provider.refresh,
                     color: AppColors.neonBlue,
                     child: CustomScrollView(
                       physics: const BouncingScrollPhysics(),
@@ -292,7 +293,8 @@ SliverToBoxAdapter(
                                 app: provider.appLimits[index],
                                 index: index,
                                 onToggle: () => provider.toggleApp(
-                                    provider.appLimits[index].packageName),
+                                  provider.appLimits[index].packageName,
+                                ),
                               ),
                               childCount: provider.appLimits.length,
                             ),
