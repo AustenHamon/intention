@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/models/app_limit.dart';
 import '../../../data/repositories/app_limits_repository.dart';
 import '../../../core/services/usage_stats_service.dart';
+import 'dart:async';
 
 class DashboardProvider extends ChangeNotifier {
   final AppLimitsRepository _repository = AppLimitsRepository();
@@ -34,45 +35,30 @@ class DashboardProvider extends ChangeNotifier {
     return 'Good evening';
   }
 
-  Future<void> loadData() async {
+Future<void> loadData() async {
   _isLoading = true;
   notifyListeners();
 
-  // Check permission
   final hasPermission = await UsageStatsService.hasPermission();
-
-  // Load limits from DB
   _appLimits = await _repository.getAppLimits();
 
   if (hasPermission && _appLimits.isNotEmpty) {
-    // Get real usage data
     final packages = _appLimits.map((a) => a.packageName).toList();
     final realUsage = await UsageStatsService.getUsageForPackages(packages);
 
-    _appLimits = _appLimits.map((app) {
-      return app.copyWith(
+    _appLimits = await Future.wait(_appLimits.map((app) async {
+      final updated = app.copyWith(
         usedMinutesToday: realUsage[app.packageName] ?? 0,
       );
-    }).toList();
-  } else if (_appLimits.isNotEmpty) {
-    // Fallback demo data if no permission
-    _appLimits = _appLimits.map((app) {
-      final demoUsage = <String, int>{
-        'com.zhiliaoapp.musically': 45,
-        'com.instagram.android': 28,
-        'com.twitter.android': 12,
-        'com.google.android.youtube': 67,
-        'com.facebook.katana': 8,
-      };
-      return app.copyWith(
-        usedMinutesToday: demoUsage[app.packageName] ?? 0,
-      );
-    }).toList();
+      // Save real usage back to database so TriggerService can read it
+      await _repository.updateAppLimit(updated);
+      return updated;
+    }));
   }
 
   _isLoading = false;
   notifyListeners();
-  }
+}
 
   Future<void> toggleApp(String packageName) async {
   final index =
@@ -83,5 +69,26 @@ class DashboardProvider extends ChangeNotifier {
   _appLimits[index] = updated;
   await _repository.updateAppLimit(updated);
   notifyListeners();
+}
+Timer? _refreshTimer;
+
+void startAutoRefresh() {
+  _refreshTimer?.cancel();
+  // Refresh usage every 60 seconds
+  _refreshTimer = Timer.periodic(
+    const Duration(seconds: 60),
+    (_) => loadData(),
+  );
+}
+
+void stopAutoRefresh() {
+  _refreshTimer?.cancel();
+  _refreshTimer = null;
+}
+
+@override
+void dispose() {
+  stopAutoRefresh();
+  super.dispose();
 }
 }

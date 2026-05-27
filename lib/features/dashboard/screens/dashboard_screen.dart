@@ -16,10 +16,12 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => DashboardProvider()..loadData(),
-      child: const _DashboardView(),
-    );
-  }
+     create: (_) => DashboardProvider()
+       ..loadData()
+       ..startAutoRefresh(),
+       child: const _DashboardView(),
+  );
+}
 }
 
 class _DashboardView extends StatelessWidget {

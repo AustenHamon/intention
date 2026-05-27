@@ -10,7 +10,6 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
-import android.app.ActivityManager
 
 class MainActivity : FlutterActivity() {
 
@@ -23,7 +22,6 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // Method channel — check/open accessibility settings
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             METHOD_CHANNEL
@@ -38,18 +36,24 @@ class MainActivity : FlutterActivity() {
                     startActivity(intent)
                     result.success(true)
                 }
+                "updateMonitoredPackages" -> {
+                    val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    IntentionAccessibilityService.monitoredPackages.clear()
+                    IntentionAccessibilityService.monitoredPackages.addAll(packages)
+                    android.util.Log.d("INTENTION", "Updated monitored packages: $packages")
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
 
-        // Event channel — stream app open events to Flutter
         EventChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             EVENT_CHANNEL
         ).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
                 eventSink = sink
-                registerReceiver()
+                registerAppReceiver()
             }
 
             override fun onCancel(arguments: Any?) {
@@ -76,35 +80,22 @@ class MainActivity : FlutterActivity() {
         return false
     }
 
-    private fun registerReceiver() {
+    private fun registerAppReceiver() {
         appOpenedReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val packageName = intent?.getStringExtra(
-                IntentionAccessibilityService.EXTRA_PACKAGE_NAME
-            ) ?: return
-            eventSink?.success(packageName)
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val packageName = intent?.getStringExtra(
+                    IntentionAccessibilityService.EXTRA_PACKAGE_NAME
+                ) ?: return
+                eventSink?.success(packageName)
+            }
         }
-    }
         val filter = IntentFilter(IntentionAccessibilityService.ACTION_APP_OPENED)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(appOpenedReceiver, filter, RECEIVER_EXPORTED)
-            } else {
+        } else {
             registerReceiver(appOpenedReceiver, filter)
-       }
-    }
-    private fun launchCoolingLadder(packageName: String, appName: String, appEmoji: String, overrideCount: Int) {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra("route", "cooling-ladder")
-            putExtra("packageName", packageName)
-            putExtra("appName", appName)
-            putExtra("appEmoji", appEmoji)
-            putExtra("overrideCount", overrideCount)
         }
-        startActivity(intent)
-    }  
+    }
 
     private fun unregisterAppReceiver() {
         try {

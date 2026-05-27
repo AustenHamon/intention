@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 class AppAccessibilityService {
   static const MethodChannel _methodChannel =
@@ -7,7 +8,6 @@ class AppAccessibilityService {
   static const EventChannel _eventChannel =
       EventChannel('com.austennkuna.intention/app_events');
 
-  // Check if accessibility service is enabled
   static Future<bool> isEnabled() async {
     try {
       final result =
@@ -18,16 +18,23 @@ class AppAccessibilityService {
     }
   }
 
-  // Open accessibility settings
   static Future<void> openSettings() async {
     try {
       await _methodChannel.invokeMethod('openAccessibilitySettings');
+    } catch (e) {}
+  }
+
+  // Send monitored packages to Kotlin so it only broadcasts those
+  static Future<void> updateMonitoredPackages(List<String> packages) async {
+    try {
+      await _methodChannel.invokeMethod('updateMonitoredPackages', {
+        'packages': packages,
+      });
     } catch (e) {
-      // Handle error
+      debugPrint('updateMonitoredPackages error: $e');
     }
   }
 
-  // Stream of package names when apps are opened
   static Stream<String> get appOpenedStream {
     return _eventChannel
         .receiveBroadcastStream()
