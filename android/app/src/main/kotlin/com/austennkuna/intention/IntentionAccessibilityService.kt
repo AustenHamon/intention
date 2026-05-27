@@ -35,29 +35,28 @@ class IntentionAccessibilityService : AccessibilityService() {
 
         val packageName = event.packageName?.toString() ?: return
 
-        // Ignore system UI and our own app
-        if (packageName == "com.austennkuna.intention") return
-        if (packageName == "com.android.systemui") return
-        if (packageName == lastPackage) return
+       if (packageName == "com.austennkuna.intention") return
+       if (packageName == "com.android.systemui") return
+       if (packageName == lastPackage) return
 
-        lastPackage = packageName
+       lastPackage = packageName
 
-        android.util.Log.d("INTENTION", "App opened: $packageName")
+      android.util.Log.d("INTENTION", "App opened: $packageName")
 
-        // Only broadcast if this package is in our monitored list
-        if (monitoredPackages.isEmpty() || !monitoredPackages.contains(packageName)) {
+       if (monitoredPackages.isEmpty() || !monitoredPackages.contains(packageName)) {
             android.util.Log.d("INTENTION", "Ignoring $packageName — not in monitored list")
-            return
-        }
+         return
+    }
 
-        android.util.Log.d("INTENTION", "Broadcasting monitored app: $packageName")
+      android.util.Log.d("INTENTION", "Broadcasting monitored app: $packageName")
 
+    // Still broadcast to Flutter for usage tracking
         val broadcastIntent = Intent(ACTION_APP_OPENED).apply {
             putExtra(EXTRA_PACKAGE_NAME, packageName)
             setPackage(applicationContext.packageName)
-        }
-        sendBroadcast(broadcastIntent)
     }
+      sendBroadcast(broadcastIntent)
+}
 
     override fun onInterrupt() {
         isRunning = false

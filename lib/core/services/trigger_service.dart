@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import '../../data/repositories/app_limits_repository.dart';
 import 'accessibility_service.dart';
 
@@ -11,42 +11,45 @@ class TriggerService {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
+  static const MethodChannel _overlayChannel =
+      MethodChannel('com.austennkuna.intention/overlay');
+
   StreamSubscription<String>? _subscription;
   final AppLimitsRepository _repository = AppLimitsRepository();
   bool _overlayShowing = false;
 
-Future<void> initialise() async {
-  _subscription?.cancel();
-  _subscription = AppAccessibilityService.appOpenedStream.listen(
-    _onAppOpened,
-    onError: (e) => debugPrint('TriggerService error: $e'),
-  );
+  Future<void> initialise() async {
+    _subscription?.cancel();
+    _subscription = AppAccessibilityService.appOpenedStream.listen(
+      _onAppOpened,
+      onError: (e) => debugPrint('TriggerService error: $e'),
+    );
 
-  // Delay sync to ensure database is ready
-  await Future.delayed(const Duration(seconds: 2));
-  await _syncMonitoredPackages();
-}
+    _overlayChannel.setMethodCallHandler((call) async {
+      if (call.method == 'overlayDismissed') {
+        debugPrint('TriggerService: overlay dismissed — resetting flag');
+        _overlayShowing = false;
+      }
+    });
 
-  // Sync monitored packages to Kotlin accessibility service
-Future<void> _syncMonitoredPackages() async {
-  final limits = await _repository.getAppLimits();
-  final packages = limits
-      .where((a) => a.isEnabled)
-      .map((a) => a.packageName)
-      .toList();
-  
-  debugPrint('TriggerService: found ${limits.length} limits in DB');
-  debugPrint('TriggerService: syncing packages: $packages');
-  
-  await AppAccessibilityService.updateMonitoredPackages(packages);
-  debugPrint('TriggerService: synced ${packages.length} monitored packages to Kotlin');
-}
+    await Future.delayed(const Duration(seconds: 2));
+    await _syncMonitoredPackages();
+  }
+
+  Future<void> _syncMonitoredPackages() async {
+    final limits = await _repository.getAppLimits();
+    final packages = limits
+        .where((a) => a.isEnabled)
+        .map((a) => a.packageName)
+        .toList();
+    await AppAccessibilityService.updateMonitoredPackages(packages);
+    debugPrint('TriggerService: synced ${packages.length} packages');
+  }
 
   Future<void> _onAppOpened(String packageName) async {
     if (_overlayShowing) return;
 
     final limits = await _repository.getAppLimits();
-
     final match = limits.where(
       (a) => a.packageName == packageName && a.isEnabled && a.isOverLimit,
     );
@@ -58,29 +61,31 @@ Future<void> _syncMonitoredPackages() async {
     final app = match.first;
     _overlayShowing = true;
 
-    debugPrint('TriggerService: cooling ladder for ${app.displayName}');
+    debugPrint('TriggerService: launching overlay for ${app.displayName}');
 
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      await _overlayChannel.invokeMethod('showOverlay', {
+        'packageName': app.packageName,
+        'appName': app.displayName,
+        'overrideCount': app.overrideCount,
+      });
 
-    final ctx = TriggerService.navigatorKey.currentContext;
-    if (ctx == null) {
+      // Fallback reset — longer than the shortest wait tier (5s)
+      Future.delayed(const Duration(seconds: 6), () {
+        _overlayShowing = false;
+        debugPrint('TriggerService: overlay flag reset (fallback)');
+      });
+    } catch (e) {
+      debugPrint('TriggerService overlay error: $e');
       _overlayShowing = false;
-      return;
     }
-
-    ctx.go('/cooling-ladder', extra: {
-      'packageName': app.packageName,
-      'appName': app.displayName,
-      'appEmoji': app.emoji,
-      'overrideCount': app.overrideCount,
-    });
   }
 
   void onOverlayDismissed() {
     _overlayShowing = false;
+    debugPrint('TriggerService: overlay dismissed — resetting flag');
   }
 
-  // Call this after user updates app limits
   Future<void> refreshMonitoredPackages() async {
     await _syncMonitoredPackages();
   }

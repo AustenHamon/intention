@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/services/usage_stats_service.dart';
+import '../../../core/services/accessibility_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/glass_container.dart';
-import '../../../core/services/accessibility_service.dart';
 
 class PermissionScreen extends StatefulWidget {
   const PermissionScreen({super.key});
@@ -18,39 +19,71 @@ class _PermissionScreenState extends State<PermissionScreen> {
   bool _isChecking = false;
   bool _permissionGranted = false;
   bool _accessibilityGranted = false;
+  bool _overlayGranted = false;
 
-@override
-void initState() {
-  super.initState();
-  _checkPermissions();
-}
+  static const _overlayChannel =
+      MethodChannel('com.austennkuna.intention/overlay');
 
-Future<void> _checkPermissions() async {
-  final usage = await UsageStatsService.hasPermission();
-  final accessibility = await AppAccessibilityService.isEnabled();
-  setState(() {
-    _permissionGranted = usage;
-    _accessibilityGranted = accessibility;
-  });
-}
-
-Future<void> _requestPermission() async {
-  setState(() => _isChecking = true);
-  if (!_permissionGranted) {
-    await UsageStatsService.requestPermission();
-  } else {
-    await AppAccessibilityService.openSettings();
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissions();
   }
-  await Future.delayed(const Duration(seconds: 2));
-  await _checkPermissions();
-  setState(() => _isChecking = false);
-}
 
-bool get _allGranted => _permissionGranted && _accessibilityGranted;
+  Future<void> _checkPermissions() async {
+    final usage = await UsageStatsService.hasPermission();
+    final accessibility = await AppAccessibilityService.isEnabled();
+    final overlay = await _checkOverlayPermission();
+    setState(() {
+      _permissionGranted = usage;
+      _accessibilityGranted = accessibility;
+      _overlayGranted = overlay;
+    });
+  }
 
-Future<void> _continue() async {
-  context.go('/app-picker');
-}
+  Future<bool> _checkOverlayPermission() async {
+    try {
+      final result =
+          await _overlayChannel.invokeMethod<bool>('checkOverlayPermission');
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _requestPermission() async {
+    setState(() => _isChecking = true);
+    if (!_permissionGranted) {
+      await UsageStatsService.requestPermission();
+    } else if (!_accessibilityGranted) {
+      await AppAccessibilityService.openSettings();
+    } else if (!_overlayGranted) {
+      await _overlayChannel.invokeMethod('requestOverlayPermission');
+    }
+    await Future.delayed(const Duration(seconds: 2));
+    await _checkPermissions();
+    setState(() => _isChecking = false);
+  }
+
+  bool get _allGranted =>
+      _permissionGranted && _accessibilityGranted && _overlayGranted;
+
+  String get _buttonText {
+    if (_allGranted) return 'Continue →';
+    if (!_permissionGranted) return 'Grant Usage Access';
+    if (!_accessibilityGranted) return 'Grant Accessibility Access';
+    return 'Grant Display Over Apps';
+  }
+
+  String get _statusText {
+    if (!_permissionGranted) return 'Usage access required';
+    if (!_accessibilityGranted) return 'Accessibility access required';
+    return 'Display over apps required';
+  }
+
+  Future<void> _continue() async {
+    context.go('/app-picker');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +146,7 @@ Future<void> _continue() async {
                     ],
                     child: const Center(
                       child: Icon(
-                        Icons.bar_chart_rounded,
+                        Icons.shield_rounded,
                         color: Colors.white,
                         size: 56,
                       ),
@@ -131,7 +164,7 @@ Future<void> _continue() async {
 
                   // Title
                   Text(
-                    'One permission\nto rule them all.',
+                    'Three permissions.\nFull protection.',
                     style: AppTextStyles.displayMedium.copyWith(height: 1.2),
                     textAlign: TextAlign.center,
                   )
@@ -151,24 +184,27 @@ Future<void> _continue() async {
                           icon: Icons.access_time_rounded,
                           title: 'Usage Access',
                           description:
-                              'Lets Intention read how long you spend in each app — stored only on your device.',
+                              'Reads how long you spend in each app — stored only on your device.',
                           color: AppColors.neonBlue,
-                        ),
-                        const SizedBox(height: 16),
-                        _PermissionRow(
-                          icon: Icons.lock_outline_rounded,
-                          title: '100% Private',
-                          description:
-                              'No data leaves your phone. No accounts, no cloud, no tracking.',
-                          color: AppColors.mintGreen,
+                          granted: _permissionGranted,
                         ),
                         const SizedBox(height: 16),
                         _PermissionRow(
                           icon: Icons.settings_accessibility_rounded,
                           title: 'Accessibility Service',
                           description:
-                              'Detects when you open a monitored app so Intention can show the intervention.',
+                              'Detects when you open a monitored app so Intention can intervene.',
                           color: AppColors.softPurple,
+                          granted: _accessibilityGranted,
+                        ),
+                        const SizedBox(height: 16),
+                        _PermissionRow(
+                          icon: Icons.layers_rounded,
+                          title: 'Display Over Other Apps',
+                          description:
+                              'Shows the cooling ladder on top of the monitored app — the core feature.',
+                          color: AppColors.warningAmber,
+                          granted: _overlayGranted,
                         ),
                       ],
                     ),
@@ -198,7 +234,7 @@ Future<void> _continue() async {
                                     color: AppColors.mintGreen, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'All permission granted!',
+                                  'All permissions granted!',
                                   style: AppTextStyles.labelLarge.copyWith(
                                       color: AppColors.mintGreen),
                                 ),
@@ -220,9 +256,7 @@ Future<void> _continue() async {
                                     color: AppColors.warningAmber, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  !_permissionGranted
-                                     ? 'Usage access required'
-                                     : 'Accessibility access required',
+                                  _statusText,
                                   style: AppTextStyles.labelLarge.copyWith(
                                       color: AppColors.warningAmber),
                                 ),
@@ -235,7 +269,7 @@ Future<void> _continue() async {
 
                   // Action button
                   GestureDetector(
-                    onTap: _isChecking  
+                    onTap: _isChecking
                         ? null
                         : _allGranted
                             ? _continue
@@ -253,11 +287,7 @@ Future<void> _continue() async {
                             ? const CircularProgressIndicator(
                                 color: Colors.white, strokeWidth: 2)
                             : Text(
-                                _allGranted
-                                    ? 'Continue →'
-                                    : !_permissionGranted
-                                        ? 'Grant Usage Access'
-                                        : 'Grant Accessibility Access',
+                                _buttonText,
                                 style: AppTextStyles.headlineMedium,
                               ),
                       ),
@@ -280,12 +310,14 @@ class _PermissionRow extends StatelessWidget {
   final String title;
   final String description;
   final Color color;
+  final bool granted;
 
   const _PermissionRow({
     required this.icon,
     required this.title,
     required this.description,
     required this.color,
+    required this.granted,
   });
 
   @override
@@ -298,10 +330,20 @@ class _PermissionRow extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: color.withOpacity(0.15),
-            border: Border.all(color: color.withOpacity(0.3)),
+            color: granted
+                ? AppColors.mintGreen.withOpacity(0.15)
+                : color.withOpacity(0.15),
+            border: Border.all(
+              color: granted
+                  ? AppColors.mintGreen.withOpacity(0.3)
+                  : color.withOpacity(0.3),
+            ),
           ),
-          child: Icon(icon, color: color, size: 20),
+          child: Icon(
+            granted ? Icons.check_rounded : icon,
+            color: granted ? AppColors.mintGreen : color,
+            size: 20,
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(
