@@ -7,6 +7,11 @@
      <!-- Query installed apps -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
          tools:ignore="QueryAllPackages" />
+    
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+     <!-- Required to read clipboard data -->
 
     <application
         android:label="intention"
@@ -34,6 +39,21 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+           <!-- Accessibility Service -->
+        <service
+               android:name=".IntentionAccessibilityService"
+               android:exported="true"
+               android:label="Intention"
+               android:persistent="true"
+               android:stopWithTask="false"
+               android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                 <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+               android:name="android.accessibilityservice"
+               android:resource="@xml/accessibility_service_config" />
+        </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

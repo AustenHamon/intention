@@ -22,7 +22,7 @@ class AppLimit {
     return (usedMinutesToday / dailyLimitMinutes).clamp(0.0, 1.0);
   }
 
-  bool get isOverLimit => usedMinutesToday >= dailyLimitMinutes;
+  bool get isOverLimit =>true; // usedMinutesToday >= dailyLimitMinutes;
 
   int get remainingMinutes =>
       (dailyLimitMinutes - usedMinutesToday).clamp(0, dailyLimitMinutes);

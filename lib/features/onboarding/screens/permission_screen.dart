@@ -5,6 +5,7 @@ import '../../../core/services/usage_stats_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../core/services/accessibility_service.dart';
 
 class PermissionScreen extends StatefulWidget {
   const PermissionScreen({super.key});
@@ -16,30 +17,40 @@ class PermissionScreen extends StatefulWidget {
 class _PermissionScreenState extends State<PermissionScreen> {
   bool _isChecking = false;
   bool _permissionGranted = false;
+  bool _accessibilityGranted = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _checkPermission();
-  }
+@override
+void initState() {
+  super.initState();
+  _checkPermissions();
+}
 
-  Future<void> _checkPermission() async {
-    final granted = await UsageStatsService.hasPermission();
-    setState(() => _permissionGranted = granted);
-  }
+Future<void> _checkPermissions() async {
+  final usage = await UsageStatsService.hasPermission();
+  final accessibility = await AppAccessibilityService.isEnabled();
+  setState(() {
+    _permissionGranted = usage;
+    _accessibilityGranted = accessibility;
+  });
+}
 
-  Future<void> _requestPermission() async {
-    setState(() => _isChecking = true);
+Future<void> _requestPermission() async {
+  setState(() => _isChecking = true);
+  if (!_permissionGranted) {
     await UsageStatsService.requestPermission();
-    // Wait a moment then recheck
-    await Future.delayed(const Duration(seconds: 2));
-    await _checkPermission();
-    setState(() => _isChecking = false);
+  } else {
+    await AppAccessibilityService.openSettings();
   }
+  await Future.delayed(const Duration(seconds: 2));
+  await _checkPermissions();
+  setState(() => _isChecking = false);
+}
 
-  Future<void> _continue() async {
-    context.go('/app-picker');
-  }
+bool get _allGranted => _permissionGranted && _accessibilityGranted;
+
+Future<void> _continue() async {
+  context.go('/app-picker');
+}
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +182,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                   // Permission status
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),
-                    child: _permissionGranted
+                    child: _allGranted
                         ? GlassContainer(
                             key: const ValueKey('granted'),
                             padding: const EdgeInsets.all(16),
@@ -187,7 +198,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                                     color: AppColors.mintGreen, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Usage access granted!',
+                                  'All permission granted!',
                                   style: AppTextStyles.labelLarge.copyWith(
                                       color: AppColors.mintGreen),
                                 ),
@@ -209,7 +220,9 @@ class _PermissionScreenState extends State<PermissionScreen> {
                                     color: AppColors.warningAmber, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Permission not yet granted',
+                                  !_permissionGranted
+                                     ? 'Usage access required'
+                                     : 'Accessibility access required',
                                   style: AppTextStyles.labelLarge.copyWith(
                                       color: AppColors.warningAmber),
                                 ),
@@ -222,9 +235,9 @@ class _PermissionScreenState extends State<PermissionScreen> {
 
                   // Action button
                   GestureDetector(
-                    onTap: _isChecking
+                    onTap: _isChecking  
                         ? null
-                        : _permissionGranted
+                        : _allGranted
                             ? _continue
                             : _requestPermission,
                     child: GlassContainer(
@@ -240,9 +253,11 @@ class _PermissionScreenState extends State<PermissionScreen> {
                             ? const CircularProgressIndicator(
                                 color: Colors.white, strokeWidth: 2)
                             : Text(
-                                _permissionGranted
+                                _allGranted
                                     ? 'Continue →'
-                                    : 'Grant Permission',
+                                    : !_permissionGranted
+                                        ? 'Grant Usage Access'
+                                        : 'Grant Accessibility Access',
                                 style: AppTextStyles.headlineMedium,
                               ),
                       ),

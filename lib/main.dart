@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
+import 'core/services/trigger_service.dart';
 import 'data/repositories/app_limits_repository.dart';
 
 void main() async {
@@ -23,6 +24,9 @@ void main() async {
 
   // Seed default apps
   await AppLimitsRepository().seedDefaultApps();
+
+  // Start accessibility trigger service
+  TriggerService.instance.initialise();
 
   runApp(const IntentionApp());
 }

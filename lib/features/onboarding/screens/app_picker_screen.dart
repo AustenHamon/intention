@@ -89,10 +89,8 @@ class _AppPickerScreenState extends State<AppPickerScreen> {
 
     // Clear existing limits
     for (final app in _installedApps) {
-      if (app.packageName != null) {
-        await repo.deleteAppLimit(app.packageName!);
-      }
-    }
+      await repo.deleteAppLimit(app.packageName!);
+        }
 
     // Save selected apps with default 30 min limit
     for (final package in _selectedPackages) {
@@ -243,7 +241,7 @@ class _AppPickerScreenState extends State<AppPickerScreen> {
                                             .remove(app.packageName);
                                       } else {
                                         _selectedPackages
-                                            .add(app.packageName!);
+                                            .add(app.packageName);
                                       }
                                     });
                                   },

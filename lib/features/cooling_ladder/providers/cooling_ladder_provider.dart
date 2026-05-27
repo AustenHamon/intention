@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/repositories/app_limits_repository.dart';
+import '../../../core/services/trigger_service.dart';
 
 enum CoolingTier { tier1, tier2, tier3 }
 
@@ -116,15 +117,17 @@ class CoolingLadderProvider extends ChangeNotifier {
   }
 
   Future<void> proceedToApp() async {
-    if (!canProceed) return;
-    await _repository.logOverride(packageName, _overrideCount + 1);
-    _overlayState = AppOverlayState.granted;
-    notifyListeners();
-  }
+  if (!canProceed) return;
+  await _repository.logOverride(packageName, _overrideCount + 1);
+  _overlayState = AppOverlayState.granted;
+  TriggerService.instance.onOverlayDismissed();
+  notifyListeners();
+}
 
-  void exitToHome() {
-    _overlayState = AppOverlayState.exited;
-    _timerRunning = false;
-    notifyListeners();
-  }
+void exitToHome() {
+  _overlayState = AppOverlayState.exited;
+  _timerRunning = false;
+  TriggerService.instance.onOverlayDismissed();
+  notifyListeners();
+}
 }

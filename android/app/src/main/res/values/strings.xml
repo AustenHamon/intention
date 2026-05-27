@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Intention</string>
+    <string name="accessibility_service_description">
+        Intention uses this service to detect when you open a monitored app
+        so it can show the mindful friction overlay. No data is collected or
+        transmitted outside your device.
+    </string>
+</resources>
