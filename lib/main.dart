@@ -51,6 +51,9 @@ void _startUsageSync() {
       await repo.updateAppLimit(updated);
     }
 
+    // Save daily snapshot for historical stats
+    await repo.saveTodayUsage();
+
     debugPrint('UsageSync: updated ${limits.length} apps');
   });
 }

@@ -106,6 +106,28 @@ class DatabaseHelper {
     });
   }
 
+  Future<void> saveDailyUsage(String packageName, String date, int minutes) async {
+    final db = await database;
+    await db.insert(
+      'usage_records',
+      {
+        'packageName': packageName,
+        'date': date,
+        'totalMinutes': minutes,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getWeeklyUsage() async {
+    final db = await database;
+    return await db.query(
+      'usage_records',
+      orderBy: 'date DESC',
+      limit: 100,
+    );
+  }
+
   // Reset daily usage (call at midnight)
   Future<void> resetDailyUsage() async {
     final db = await database;
