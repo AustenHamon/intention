@@ -60,7 +60,10 @@ class TriggerService {
     'TriggerService: $packageName — used=${freshMinutes}m limit=${app.dailyLimitMinutes}m',
   );
 
-  if (freshMinutes < app.dailyLimitMinutes) return;
+  // UsageStatsManager only updates every ~1 min; trigger 1 min early so the
+  // check fires within the same window the user hits their limit.
+  final effectiveLimit = (app.dailyLimitMinutes - 1).clamp(0, app.dailyLimitMinutes);
+  if (freshMinutes < effectiveLimit) return;
 
   // Save to DB
   await _repository.updateAppLimit(
