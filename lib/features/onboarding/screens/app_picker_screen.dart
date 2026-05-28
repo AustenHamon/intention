@@ -89,7 +89,7 @@ class _AppPickerScreenState extends State<AppPickerScreen> {
 
     // Clear existing limits
     for (final app in _installedApps) {
-      await repo.deleteAppLimit(app.packageName!);
+      await repo.deleteAppLimit(app.packageName);
         }
 
     // Save selected apps with default 30 min limit
@@ -99,7 +99,6 @@ class _AppPickerScreenState extends State<AppPickerScreen> {
       await repo.saveAppLimit(AppLimit(
         packageName: package,
         displayName: app.name ?? package,
-        emoji: '📱',
         dailyLimitMinutes: 30,
       ));
     }

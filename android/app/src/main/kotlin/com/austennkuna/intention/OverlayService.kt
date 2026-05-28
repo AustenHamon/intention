@@ -33,6 +33,9 @@ class OverlayService : Service() {
         const val CHANNEL_ID = "intention_overlay"
 
         var isRunning = false
+
+        fun shouldShowOverlay(packageName: String): Boolean =
+            !isRunning && packageName.isNotEmpty()
     }
 
     private var windowManager: WindowManager? = null

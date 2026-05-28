@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/app_limit.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/app_icon.dart';
 
 class LimitEditorSheet extends StatefulWidget {
   final AppLimit app;
@@ -87,19 +88,11 @@ class _LimitEditorSheetState extends State<LimitEditorSheet> {
             // App info row
             Row(
               children: [
-                GlassContainer(
-                  width: 56,
-                  height: 56,
-                  padding: EdgeInsets.zero,
-                  borderRadius: BorderRadius.circular(18),
-                  gradientColors: [
-                    _accentColor.withOpacity(0.3),
-                    _accentColor.withOpacity(0.1),
-                  ],
-                  child: Center(
-                    child: Text(widget.app.emoji,
-                        style: const TextStyle(fontSize: 28)),
-                  ),
+                AppIcon(
+                  packageName: widget.app.packageName,
+                  size: 28,
+                  containerSize: 56,
+                  borderRadius: 18,
                 ),
                 const SizedBox(width: 16),
                 Expanded(

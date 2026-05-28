@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../providers/cooling_ladder_provider.dart';
+import '../../../shared/widgets/app_icon.dart';
 
 class CoolingLadderScreen extends StatelessWidget {
   final String packageName;
@@ -223,21 +224,11 @@ class _AppIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassContainer(
-      width: 110,
-      height: 110,
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(32),
-      gradientColors: [
-        Colors.white.withOpacity(0.15),
-        Colors.white.withOpacity(0.05),
-      ],
-      child: Center(
-        child: Text(
-          provider.appEmoji,
-          style: const TextStyle(fontSize: 52),
-        ),
-      ),
+    return AppIcon(
+      packageName: provider.packageName,
+      size: 52,
+      containerSize: 110,
+      borderRadius: 32,
     )
         .animate()
         .scale(

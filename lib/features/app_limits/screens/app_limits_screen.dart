@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../providers/app_limits_provider.dart';
 import '../widgets/limit_editor_sheet.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
@@ -164,28 +165,12 @@ class _AppLimitsView extends StatelessWidget {
                               borderRadius: BorderRadius.circular(22),
                               child: Row(
                                 children: [
-                                  // Emoji
-                                  GlassContainer(
-                                    width: 52,
-                                    height: 52,
-                                    padding: EdgeInsets.zero,
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradientColors: [
-                                      AppColors.neonBlue.withOpacity(
-                                          app.isEnabled ? 0.3 : 0.1),
-                                      AppColors.softPurple.withOpacity(
-                                          app.isEnabled ? 0.15 : 0.05),
-                                    ],
-                                    child: Center(
-                                      child: Text(app.emoji,
-                                          style: TextStyle(
-                                            fontSize: 26,
-                                            color: app.isEnabled
-                                                ? null
-                                                : Colors.white
-                                                    .withOpacity(0.4),
-                                          )),
-                                    ),
+                                  // App icon
+                                  AppIcon(
+                                    packageName: app.packageName,
+                                    size: 24,
+                                    containerSize: 52,
+                                    borderRadius: 16,
                                   ),
 
                                   const SizedBox(width: 16),

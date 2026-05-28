@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/repositories/app_limits_repository.dart';
 import 'accessibility_service.dart';
+import 'usage_stats_service.dart';
 
 class TriggerService {
   static final TriggerService instance = TriggerService._init();
@@ -25,6 +26,7 @@ class TriggerService {
       onError: (e) => debugPrint('TriggerService error: $e'),
     );
 
+    // Listen for overlay dismissed from native
     _overlayChannel.setMethodCallHandler((call) async {
       if (call.method == 'overlayDismissed') {
         debugPrint('TriggerService: overlay dismissed — resetting flag');
@@ -36,49 +38,69 @@ class TriggerService {
     await _syncMonitoredPackages();
   }
 
-  Future<void> _syncMonitoredPackages() async {
-    final limits = await _repository.getAppLimits();
-    final packages = limits
-        .where((a) => a.isEnabled)
-        .map((a) => a.packageName)
-        .toList();
-    await AppAccessibilityService.updateMonitoredPackages(packages);
-    debugPrint('TriggerService: synced ${packages.length} packages');
-  }
-
   Future<void> _onAppOpened(String packageName) async {
-    if (_overlayShowing) return;
 
-    final limits = await _repository.getAppLimits();
-    final match = limits.where(
-      (a) => a.packageName == packageName && a.isEnabled && a.isOverLimit,
-    );
+  if (_overlayShowing) return;
 
-    debugPrint('TriggerService: $packageName — over limit: ${match.isNotEmpty}');
+  // Fetch fresh usage directly from UsageStatsManager
+  final limits = await _repository.getAppLimits();
+  final appLimit = limits.where(
+    (a) => a.packageName == packageName && a.isEnabled,
+  );
 
-    if (match.isEmpty) return;
+  if (appLimit.isEmpty) return;
 
-    final app = match.first;
+  final app = appLimit.first;
+
+  // Get real-time usage
+  final realUsage = await UsageStatsService.getUsageForPackages([packageName]);
+  final freshMinutes = realUsage[packageName] ?? 0;
+
+  debugPrint(
+    'TriggerService: $packageName — used=${freshMinutes}m limit=${app.dailyLimitMinutes}m',
+  );
+
+  if (freshMinutes < app.dailyLimitMinutes) return;
+
+  // Save to DB
+  await _repository.updateAppLimit(
+    app.copyWith(usedMinutesToday: freshMinutes),
+  );
+
+  await _triggerOverlay(app.packageName, app.displayName, app.overrideCount);
+}
+
+  Future<void> _triggerOverlay(
+      String packageName, String appName, int overrideCount) async {
     _overlayShowing = true;
-
-    debugPrint('TriggerService: launching overlay for ${app.displayName}');
+    debugPrint('TriggerService: launching overlay for $appName');
 
     try {
       await _overlayChannel.invokeMethod('showOverlay', {
-        'packageName': app.packageName,
-        'appName': app.displayName,
-        'overrideCount': app.overrideCount,
+        'packageName': packageName,
+        'appName': appName,
+        'overrideCount': overrideCount,
       });
 
-      // Fallback reset — longer than the shortest wait tier (5s)
-      Future.delayed(const Duration(seconds: 6), () {
-        _overlayShowing = false;
-        debugPrint('TriggerService: overlay flag reset (fallback)');
+      // Safety net reset after longest tier + buffer
+      Future.delayed(const Duration(seconds: 70), () {
+        if (_overlayShowing) {
+          _overlayShowing = false;
+          debugPrint('TriggerService: safety net reset');
+        }
       });
     } catch (e) {
       debugPrint('TriggerService overlay error: $e');
       _overlayShowing = false;
     }
+  }
+
+  Future<void> _syncMonitoredPackages() async {
+    final limits = await _repository.getAppLimits();
+    final packages =
+        limits.where((a) => a.isEnabled).map((a) => a.packageName).toList();
+    await AppAccessibilityService.updateMonitoredPackages(packages);
+    debugPrint('TriggerService: synced ${packages.length} packages');
   }
 
   void onOverlayDismissed() {

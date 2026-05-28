@@ -5,6 +5,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/app_icon.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
 
 class StatsScreen extends StatefulWidget {
@@ -31,42 +32,42 @@ class _StatsScreenState extends State<StatsScreen> {
   ];
 
   final List<Map<String, dynamic>> _appBreakdown = [
-    {
-      'name': 'YouTube',
-      'emoji': '▶️',
-      'minutes': 67,
-      'limit': 45,
-      'color': AppColors.dangerRed,
-    },
-    {
-      'name': 'TikTok',
-      'emoji': '🎵',
-      'minutes': 45,
-      'limit': 30,
-      'color': AppColors.warningAmber,
-    },
-    {
-      'name': 'Instagram',
-      'emoji': '📸',
-      'minutes': 28,
-      'limit': 30,
-      'color': AppColors.mintGreen,
-    },
-    {
-      'name': 'Twitter / X',
-      'emoji': '🐦',
-      'minutes': 12,
-      'limit': 20,
-      'color': AppColors.neonBlue,
-    },
-    {
-      'name': 'Facebook',
-      'emoji': '👥',
-      'minutes': 8,
-      'limit': 20,
-      'color': AppColors.mintGreen,
-    },
-  ];
+  {
+    'name': 'YouTube',
+    'package': 'com.google.android.youtube',
+    'minutes': 67,
+    'limit': 45,
+    'color': AppColors.dangerRed,
+  },
+  {
+    'name': 'TikTok',
+    'package': 'com.zhiliaoapp.musically',
+    'minutes': 45,
+    'limit': 30,
+    'color': AppColors.warningAmber,
+  },
+  {
+    'name': 'Instagram',
+    'package': 'com.instagram.android',
+    'minutes': 28,
+    'limit': 30,
+    'color': AppColors.mintGreen,
+  },
+  {
+    'name': 'Twitter / X',
+    'package': 'com.twitter.android',
+    'minutes': 12,
+    'limit': 20,
+    'color': AppColors.neonBlue,
+  },
+  {
+    'name': 'Facebook',
+    'package': 'com.facebook.katana',
+    'minutes': 8,
+    'limit': 20,
+    'color': AppColors.mintGreen,
+  },
+];
 
   int get _maxMinutes =>
       _weeklyData.map((d) => d['total'] as int).reduce((a, b) => a > b ? a : b);
@@ -440,9 +441,12 @@ class _StatsScreenState extends State<StatsScreen> {
                                     circularStrokeCap:
                                         CircularStrokeCap.round,
                                   ),
-                                  Text(app['emoji'] as String,
-                                      style:
-                                          const TextStyle(fontSize: 18)),
+                                  AppIcon(
+                                    packageName: app['package'] as String,
+                                    size: 20,
+                                    containerSize: 36,
+                                    borderRadius: 10,
+                                  ),
                                 ],
                               ),
                               const SizedBox(width: 14),

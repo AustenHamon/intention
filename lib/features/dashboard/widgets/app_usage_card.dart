@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/app_limit.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/app_icon.dart';
 
 class AppUsageCard extends StatelessWidget {
   final AppLimit app;
@@ -44,7 +45,7 @@ class AppUsageCard extends StatelessWidget {
           : null,
       child: Row(
         children: [
-          // Emoji + progress ring
+          // App icon + progress ring
           Stack(
             alignment: Alignment.center,
             children: [
@@ -56,7 +57,12 @@ class AppUsageCard extends StatelessWidget {
                 progressColor: _progressColor,
                 circularStrokeCap: CircularStrokeCap.round,
               ),
-              Text(app.emoji, style: const TextStyle(fontSize: 22)),
+              AppIcon(
+                packageName: app.packageName,
+                size: 18,
+                containerSize: 36,
+                borderRadius: 10,
+              ),
             ],
           ),
 
@@ -70,8 +76,7 @@ class AppUsageCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(app.displayName,
-                        style: AppTextStyles.labelLarge),
+                    Text(app.displayName, style: AppTextStyles.labelLarge),
                     Text(
                       '${app.usedMinutesToday}m / ${app.dailyLimitMinutes}m',
                       style: AppTextStyles.labelSmall,
@@ -79,14 +84,12 @@ class AppUsageCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                // Progress bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: app.usagePercent,
                     backgroundColor: Colors.white.withOpacity(0.1),
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(_progressColor),
+                    valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
                     minHeight: 6,
                   ),
                 ),
@@ -94,10 +97,11 @@ class AppUsageCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(_statusText,
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: _progressColor,
-                        )),
+                    Text(
+                      _statusText,
+                      style: AppTextStyles.labelSmall
+                          .copyWith(color: _progressColor),
+                    ),
                     if (app.isOverLimit)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -106,12 +110,11 @@ class AppUsageCard extends StatelessWidget {
                           color: AppColors.dangerRed.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color:
-                                  AppColors.dangerRed.withOpacity(0.5)),
+                              color: AppColors.dangerRed.withOpacity(0.5)),
                         ),
                         child: Text('Over limit',
-                            style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.dangerRed)),
+                            style: AppTextStyles.labelSmall
+                                .copyWith(color: AppColors.dangerRed)),
                       ),
                   ],
                 ),
@@ -121,7 +124,7 @@ class AppUsageCard extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          // Toggle switch
+          // Toggle
           GestureDetector(
             onTap: onToggle,
             child: AnimatedContainer(
@@ -133,8 +136,8 @@ class AppUsageCard extends StatelessWidget {
                 color: app.isEnabled
                     ? AppColors.neonBlue.withOpacity(0.6)
                     : Colors.white.withOpacity(0.1),
-                border: Border.all(
-                    color: Colors.white.withOpacity(0.2), width: 1),
+                border:
+                    Border.all(color: Colors.white.withOpacity(0.2), width: 1),
               ),
               child: AnimatedAlign(
                 duration: const Duration(milliseconds: 300),

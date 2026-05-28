@@ -6,7 +6,7 @@ import '../../../shared/widgets/glass_container.dart';
 class StatCard extends StatelessWidget {
   final String label;
   final String value;
-  final String emoji;
+  final IconData icon;
   final List<Color> gradientColors;
   final int animationDelay;
 
@@ -14,38 +14,35 @@ class StatCard extends StatelessWidget {
     super.key,
     required this.label,
     required this.value,
-    required this.emoji,
+    required this.icon,
     required this.gradientColors,
     this.animationDelay = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: GlassContainer(
-        width: double.infinity,
-        gradientColors: [
-          gradientColors[0].withOpacity(0.25),
-          gradientColors[1].withOpacity(0.1),
+    return GlassContainer(
+      width: double.infinity,
+      height: double.infinity,
+      gradientColors: [
+        gradientColors[0].withOpacity(0.25),
+        gradientColors[1].withOpacity(0.1),
+      ],
+      borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Icon(icon, color: gradientColors[0], size: 26),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: AppTextStyles.displayMedium.copyWith(fontSize: 26),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: AppTextStyles.labelSmall),
         ],
-        borderRadius: BorderRadius.circular(20),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(emoji,
-                style: const TextStyle(
-                  fontSize: 26,
-                  height: 1.2,
-                )),
-            const SizedBox(height: 10),
-            Text(value,
-                style: AppTextStyles.displayMedium.copyWith(fontSize: 26)),
-            const SizedBox(height: 4),
-            Text(label, style: AppTextStyles.labelSmall),
-          ],
-        ),
       ),
     )
         .animate()

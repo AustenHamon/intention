@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/app_limit.dart';
 import '../../../data/repositories/app_limits_repository.dart';
-import '../../../core/services/usage_stats_service.dart';
 import 'dart:async';
+import '../../../core/services/usage_stats_service.dart';
 
 class DashboardProvider extends ChangeNotifier {
   final AppLimitsRepository _repository = AppLimitsRepository();
@@ -39,18 +39,22 @@ Future<void> loadData() async {
   _isLoading = true;
   notifyListeners();
 
+  // Check permission
   final hasPermission = await UsageStatsService.hasPermission();
+
+  // Load limits from DB — these already have real usage saved by background sync
   _appLimits = await _repository.getAppLimits();
 
   if (hasPermission && _appLimits.isNotEmpty) {
+    // Get fresh real usage data directly from UsageStatsManager
     final packages = _appLimits.map((a) => a.packageName).toList();
     final realUsage = await UsageStatsService.getUsageForPackages(packages);
 
+    // Update in memory AND save to DB so TriggerService stays in sync
     _appLimits = await Future.wait(_appLimits.map((app) async {
       final updated = app.copyWith(
         usedMinutesToday: realUsage[app.packageName] ?? 0,
       );
-      // Save real usage back to database so TriggerService can read it
       await _repository.updateAppLimit(updated);
       return updated;
     }));

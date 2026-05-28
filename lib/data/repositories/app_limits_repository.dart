@@ -26,17 +26,16 @@ class AppLimitsRepository {
   }
 
   Future<void> seedDefaultApps() async {
-    final existing = await _db.getAllAppLimits();
-    if (existing.isNotEmpty) return;
+  final existing = await _db.getAllAppLimits();
+  if (existing.isNotEmpty) return;
 
-    for (final package in AppConstants.defaultMonitoredApps) {
-      final limit = AppLimit(
-        packageName: package,
-        displayName: AppConstants.appDisplayNames[package] ?? package,
-        emoji: AppConstants.appEmojis[package] ?? '📱',
-        dailyLimitMinutes: AppConstants.defaultLimits[package] ?? 30,
-      );
-      await _db.insertAppLimit(limit);
-    }
+  for (final package in AppConstants.defaultMonitoredApps) {
+    final limit = AppLimit(
+      packageName: package,
+      displayName: AppConstants.appDisplayNames[package] ?? package,
+      dailyLimitMinutes: AppConstants.defaultLimits[package] ?? 30,
+    );
+    await _db.insertAppLimit(limit);
   }
+}
 }

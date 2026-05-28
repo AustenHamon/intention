@@ -105,22 +105,14 @@ class _DashboardView extends StatelessWidget {
                                 // Settings button
                                 // Settings button
 GestureDetector(
-  onTap: () => context.go(
-    '/cooling-ladder',
-    extra: {
-      'packageName': 'com.instagram.android',
-      'appName': 'Instagram',
-      'appEmoji': '📸',
-      'overrideCount': 0,
-    },
-  ),
+  onTap: () => context.go('/settings'),
   child: GlassContainer(
     width: 48,
     height: 48,
     padding: EdgeInsets.zero,
     borderRadius: BorderRadius.circular(16),
     child: const Icon(
-      Icons.play_circle_outline_rounded,
+      Icons.settings_rounded,
       color: Colors.white,
       size: 22,
     ),
@@ -207,10 +199,10 @@ SliverToBoxAdapter(
             child: StatCard(
               label: 'Apps tracked',
               value: '${provider.totalAppsMonitored}',
-              emoji: '🛡️',
+              icon: Icons.shield_rounded,
               gradientColors: [
                 AppColors.neonBlue,
-                AppColors.softPurple
+                AppColors.softPurple,
               ],
               animationDelay: 300,
             ),
@@ -220,10 +212,10 @@ SliverToBoxAdapter(
             child: StatCard(
               label: 'Over limit',
               value: '${provider.appsOverLimit}',
-              emoji: '⚠️',
+              icon: Icons.warning_rounded,
               gradientColors: [
                 AppColors.warningAmber,
-                AppColors.dangerRed
+                AppColors.dangerRed,
               ],
               animationDelay: 400,
             ),
@@ -233,10 +225,10 @@ SliverToBoxAdapter(
             child: StatCard(
               label: 'Minutes saved',
               value: '12',
-              emoji: '✅',
+              icon: Icons.check_circle_rounded,
               gradientColors: [
                 AppColors.mintGreen,
-                AppColors.neonBlue
+                AppColors.neonBlue,
               ],
               animationDelay: 500,
             ),
