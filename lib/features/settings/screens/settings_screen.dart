@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
@@ -15,17 +17,45 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
   bool _strictMode = false;
   bool _dailyReminder = true;
   bool _showOverrideCount = true;
   bool _positiveFraming = true;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
 
+  static final _adminChannel =
+      MethodChannel('com.austennkuna.intention/accessibility');
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadPreferences();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkAdminState();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _checkAdminState() async {
+    try {
+      final isActive =
+          await _adminChannel.invokeMethod<bool>('isDeviceAdminActive') ??
+              false;
+      if (mounted) {
+        setState(() => _strictMode = isActive);
+        _savePref('strict_mode', isActive);
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadPreferences() async {
@@ -35,6 +65,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _dailyReminder = prefs.getBool('daily_reminder') ?? true;
       _showOverrideCount = prefs.getBool('show_override_count') ?? true;
       _positiveFraming = prefs.getBool('positive_framing') ?? true;
+      _reminderTime = TimeOfDay(
+        hour: prefs.getInt('reminder_hour') ?? 20,
+        minute: prefs.getInt('reminder_minute') ?? 0,
+      );
     });
   }
 
@@ -67,6 +101,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (picked != null) {
       setState(() => _reminderTime = picked);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('reminder_hour', picked.hour);
+      await prefs.setInt('reminder_minute', picked.minute);
     }
   }
 
@@ -157,18 +194,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     physics: const BouncingScrollPhysics(),
                     children: [
                       // Section: Behaviour
-                      _SectionHeader(title: 'Behaviour', emoji: '🧠'),
+                      _SectionHeader(title: 'Behaviour', icon: FontAwesomeIcons.brain),
                       const SizedBox(height: 12),
 
                       _SettingsTile(
-                        emoji: '🔒',
+                        icon: FontAwesomeIcons.lock,
                         title: 'Strict Mode',
                         subtitle:
                             'Prevents uninstalling the app without disabling first',
                         value: _strictMode,
-                        onChanged: (val) {
-                          setState(() => _strictMode = val);
-                          _savePref('strict_mode', val);
+                        onChanged: (val) async {
+                          if (val) {
+                            final messenger = ScaffoldMessenger.of(context);
+                            await _adminChannel
+                                .invokeMethod('activateDeviceAdmin');
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Follow the system prompt to enable Strict Mode'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                            // Toggle updates via didChangeAppLifecycleState on return
+                          } else {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: const Color(0xFF1A1040),
+                                title: const Text('Disable Strict Mode?',
+                                    style: TextStyle(color: Colors.white)),
+                                content: const Text(
+                                  'The app can be uninstalled once Strict Mode is off.',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(ctx, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(ctx, true),
+                                    child: const Text('Disable',
+                                        style: TextStyle(
+                                            color: Colors.redAccent)),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true) {
+                              await _adminChannel
+                                  .invokeMethod('deactivateDeviceAdmin');
+                              setState(() => _strictMode = false);
+                              _savePref('strict_mode', false);
+                            }
+                          }
                         },
                         accentColor: AppColors.dangerRed,
                         delay: 100,
@@ -177,7 +260,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 10),
 
                       _SettingsTile(
-                        emoji: '🔢',
+                        icon: FontAwesomeIcons.hashtag,
                         title: 'Show Override Count',
                         subtitle:
                             'Display how many times you\'ve bypassed limits today',
@@ -193,7 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 10),
 
                       _SettingsTile(
-                        emoji: '💚',
+                        icon: FontAwesomeIcons.leaf,
                         title: 'Positive Framing',
                         subtitle:
                             'Use intention-based language instead of restriction language',
@@ -209,11 +292,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // Section: Reminders
-                      _SectionHeader(title: 'Reminders', emoji: '🔔'),
+                      _SectionHeader(title: 'Reminders', icon: FontAwesomeIcons.bell),
                       const SizedBox(height: 12),
 
                       _SettingsTile(
-                        emoji: '📅',
+                        icon: FontAwesomeIcons.calendarDay,
                         title: 'Daily Summary Reminder',
                         subtitle:
                             'Get a daily nudge to review your screen time',
@@ -233,8 +316,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           borderRadius: BorderRadius.circular(20),
                           child: Row(
                             children: [
-                              const Text('🕗',
-                                  style: TextStyle(fontSize: 26)),
+                              const FaIcon(FontAwesomeIcons.clock, size: 22,
+                                  color: AppColors.softPurple),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
@@ -276,7 +359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // Section: About
-                      _SectionHeader(title: 'About', emoji: 'ℹ️'),
+                      _SectionHeader(title: 'About', icon: FontAwesomeIcons.circleInfo),
                       const SizedBox(height: 12),
 
                       // App info card
@@ -295,8 +378,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 AppColors.softPurple.withOpacity(0.1),
                               ],
                               child: const Center(
-                                child: Text('🎯',
-                                    style: TextStyle(fontSize: 28)),
+                                child: FaIcon(FontAwesomeIcons.bullseye,
+                                    size: 24, color: AppColors.neonBlue),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -332,8 +415,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                         child: Row(
                           children: [
-                            const Text('🔐',
-                                style: TextStyle(fontSize: 24)),
+                            const FaIcon(FontAwesomeIcons.shieldHalved,
+                                size: 20, color: AppColors.mintGreen),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -360,7 +443,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // Section: Reset
-                      _SectionHeader(title: 'Reset', emoji: '⚠️'),
+                      _SectionHeader(title: 'Reset', icon: FontAwesomeIcons.triangleExclamation),
                       const SizedBox(height: 12),
 
                       // Replay onboarding
@@ -371,8 +454,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           borderRadius: BorderRadius.circular(20),
                           child: Row(
                             children: [
-                              const Text('🔄',
-                                  style: TextStyle(fontSize: 24)),
+                              const FaIcon(FontAwesomeIcons.arrowsRotate,
+                                  size: 20, color: Colors.white70),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -413,15 +496,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  final String emoji;
+  final IconData icon;
 
-  const _SectionHeader({required this.title, required this.emoji});
+  const _SectionHeader({required this.title, required this.icon});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 16)),
+        FaIcon(icon, size: 13, color: AppColors.textMuted),
         const SizedBox(width: 8),
         Text(title,
             style: AppTextStyles.labelLarge.copyWith(
@@ -434,7 +517,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _SettingsTile extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String title;
   final String subtitle;
   final bool value;
@@ -443,7 +526,7 @@ class _SettingsTile extends StatelessWidget {
   final int delay;
 
   const _SettingsTile({
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.value,
@@ -465,7 +548,7 @@ class _SettingsTile extends StatelessWidget {
           : null,
       child: Row(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 26)),
+          FaIcon(icon, size: 22, color: accentColor),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

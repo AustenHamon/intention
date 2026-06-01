@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/repositories/app_limits_repository.dart';
 import 'accessibility_service.dart';
 import 'usage_stats_service.dart';
@@ -78,11 +79,17 @@ class TriggerService {
     _overlayShowing = true;
     debugPrint('TriggerService: launching overlay for $appName');
 
+    final prefs = await SharedPreferences.getInstance();
+    final showOverrideCount = prefs.getBool('show_override_count') ?? true;
+    final positiveFraming = prefs.getBool('positive_framing') ?? true;
+
     try {
       await _overlayChannel.invokeMethod('showOverlay', {
         'packageName': packageName,
         'appName': appName,
         'overrideCount': overrideCount,
+        'showOverrideCount': showOverrideCount,
+        'positiveFraming': positiveFraming,
       });
 
       // Safety net reset after longest tier + buffer

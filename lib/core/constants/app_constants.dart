@@ -18,8 +18,6 @@ class AppConstants {
   static const List<String> defaultMonitoredApps = [
     'com.zhiliaoapp.musically',
     'com.instagram.android',
-    'com.twitter.android',
-    'com.google.android.youtube',
     'com.facebook.katana',
   ];
 
@@ -27,8 +25,6 @@ class AppConstants {
   static const Map<String, String> appDisplayNames = {
     'com.zhiliaoapp.musically': 'TikTok',
     'com.instagram.android': 'Instagram',
-    'com.twitter.android': 'Twitter / X',
-    'com.google.android.youtube': 'YouTube',
     'com.facebook.katana': 'Facebook',
   };
 
@@ -68,8 +64,6 @@ class AppConstants {
   static const Map<String, int> defaultLimits = {
     'com.zhiliaoapp.musically': 30,
     'com.instagram.android': 30,
-    'com.twitter.android': 20,
-    'com.google.android.youtube': 45,
     'com.facebook.katana': 20,
   };
 }

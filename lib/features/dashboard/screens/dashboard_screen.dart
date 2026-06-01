@@ -102,8 +102,7 @@ class _DashboardView extends StatelessWidget {
                                 ).animate().fadeIn(duration: 500.ms).slideY(
                                     begin: -0.2, duration: 500.ms),
 
-                                // Settings button
-                                // Settings button
+  // Settings button
 GestureDetector(
   onTap: () => context.go('/settings'),
   child: GlassContainer(
@@ -187,7 +186,7 @@ GestureDetector(
                           ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
                         ),
 
-                       // Stat cards row
+// Stat cards row
 SliverToBoxAdapter(
   child: Padding(
     padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
@@ -224,7 +223,7 @@ SliverToBoxAdapter(
           Expanded(
             child: StatCard(
               label: 'Minutes saved',
-              value: '12',
+              value: '${provider.minutesSaved}',
               icon: Icons.check_circle_rounded,
               gradientColors: [
                 AppColors.mintGreen,

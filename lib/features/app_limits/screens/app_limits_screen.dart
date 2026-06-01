@@ -236,7 +236,7 @@ Expanded(
                                       borderRadius: BorderRadius.circular(12),
                                       child: const Icon(
                                           Icons.edit_rounded,
-                                          color: Colors.white,
+                                          color: Color.fromARGB(255, 231, 227, 221),
                                           size: 18),
                                     ),
                                   ),

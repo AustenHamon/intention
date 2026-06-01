@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/glass_container.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -21,7 +22,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingData> _pages = [
     OnboardingData(
-      emoji: '📱',
+      icon: FontAwesomeIcons.mobileScreenButton,
       title: 'You open apps\nwithout thinking.',
       subtitle:
           'Research shows young adults check their phones 96 times a day — most of the time, without even realising it.',
@@ -29,7 +30,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       gradientColors: [Color(0xFF0A0E27), Color(0xFF1E3A8A)],
     ),
     OnboardingData(
-      emoji: '🧘',
+      icon: FontAwesomeIcons.spa,
       title: 'Intention adds\nmindful friction.',
       subtitle:
           'Before you scroll, we ask: is this intentional? A short pause is all it takes to break the habit loop.',
@@ -37,7 +38,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       gradientColors: [Color(0xFF1A1040), Color(0xFF4C1D95)],
     ),
     OnboardingData(
-      emoji: '🎯',
+      icon: FontAwesomeIcons.bullseye,
       title: 'You set the rules.\nWe hold them.',
       subtitle:
           'Choose your apps, set daily limits, and let Intention do the rest — privately, on your device, always.',
@@ -247,9 +248,10 @@ class _OnboardingPage extends StatelessWidget {
               data.accentColor.withOpacity(0.1),
             ],
             child: Center(
-              child: Text(
-                data.emoji,
-                style: const TextStyle(fontSize: 60),
+              child: FaIcon(
+                data.icon,
+                size: 56,
+                color: Colors.white,
               ),
             ),
           )
@@ -314,14 +316,14 @@ class _Orb extends StatelessWidget {
 }
 
 class OnboardingData {
-  final String emoji;
+  final IconData icon;
   final String title;
   final String subtitle;
   final Color accentColor;
   final List<Color> gradientColors;
 
   const OnboardingData({
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.accentColor,

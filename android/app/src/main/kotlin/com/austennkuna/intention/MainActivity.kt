@@ -1,6 +1,8 @@
 package com.austennkuna.intention
 
+import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -48,6 +50,29 @@ class MainActivity : FlutterActivity() {
                     android.util.Log.d("INTENTION", "Updated monitored packages: $packages")
                     result.success(true)
                 }
+                "isDeviceAdminActive" -> {
+                    val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                    val component = ComponentName(this, IntentionDeviceAdminReceiver::class.java)
+                    result.success(dpm.isAdminActive(component))
+                }
+                "activateDeviceAdmin" -> {
+                    val component = ComponentName(this, IntentionDeviceAdminReceiver::class.java)
+                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                        putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, component)
+                        putExtra(
+                            DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                            "Strict Mode prevents uninstalling Intention without disabling it first."
+                        )
+                    }
+                    startActivity(intent)
+                    result.success(true)
+                }
+                "deactivateDeviceAdmin" -> {
+                    val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                    val component = ComponentName(this, IntentionDeviceAdminReceiver::class.java)
+                    dpm.removeActiveAdmin(component)
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -90,12 +115,16 @@ class MainActivity : FlutterActivity() {
                     val pkg = call.argument<String>("packageName") ?: ""
                     val appName = call.argument<String>("appName") ?: "App"
                     val overrideCount = call.argument<Int>("overrideCount") ?: 0
+                    val showOverrideCount = call.argument<Boolean>("showOverrideCount") ?: true
+                    val positiveFraming = call.argument<Boolean>("positiveFraming") ?: true
 
                     if (Settings.canDrawOverlays(this)) {
                         val intent = Intent(this, OverlayService::class.java).apply {
                             putExtra(OverlayService.EXTRA_APP_PACKAGE, pkg)
                             putExtra(OverlayService.EXTRA_APP_NAME, appName)
                             putExtra(OverlayService.EXTRA_OVERRIDE_COUNT, overrideCount)
+                            putExtra(OverlayService.EXTRA_SHOW_OVERRIDE_COUNT, showOverrideCount)
+                            putExtra(OverlayService.EXTRA_POSITIVE_FRAMING, positiveFraming)
                         }
                         startForegroundService(intent)
                         result.success(true)

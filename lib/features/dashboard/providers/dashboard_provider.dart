@@ -23,6 +23,9 @@ class DashboardProvider extends ChangeNotifier {
   int get totalMinutesAllowed =>
       _appLimits.fold(0, (sum, a) => sum + a.dailyLimitMinutes);
 
+  int get minutesSaved =>
+      (totalMinutesAllowed - totalMinutesUsed).clamp(0, totalMinutesAllowed);
+
   double get overallUsagePercent {
     if (totalMinutesAllowed == 0) return 0;
     return (totalMinutesUsed / totalMinutesAllowed).clamp(0.0, 1.0);

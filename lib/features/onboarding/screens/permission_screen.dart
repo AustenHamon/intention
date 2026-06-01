@@ -15,7 +15,8 @@ class PermissionScreen extends StatefulWidget {
   State<PermissionScreen> createState() => _PermissionScreenState();
 }
 
-class _PermissionScreenState extends State<PermissionScreen> {
+class _PermissionScreenState extends State<PermissionScreen>
+    with WidgetsBindingObserver {
   bool _isChecking = false;
   bool _permissionGranted = false;
   bool _accessibilityGranted = false;
@@ -27,7 +28,22 @@ class _PermissionScreenState extends State<PermissionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkPermissions();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissions();
+      if (mounted) setState(() => _isChecking = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _checkPermissions() async {
@@ -53,16 +69,20 @@ class _PermissionScreenState extends State<PermissionScreen> {
 
   Future<void> _requestPermission() async {
     setState(() => _isChecking = true);
-    if (!_permissionGranted) {
-      await UsageStatsService.requestPermission();
-    } else if (!_accessibilityGranted) {
-      await AppAccessibilityService.openSettings();
-    } else if (!_overlayGranted) {
-      await _overlayChannel.invokeMethod('requestOverlayPermission');
+    try {
+      if (!_permissionGranted) {
+        await UsageStatsService.requestPermission();
+      } else if (!_accessibilityGranted) {
+        await AppAccessibilityService.openSettings();
+      } else if (!_overlayGranted) {
+        await _overlayChannel.invokeMethod('requestOverlayPermission');
+      }
+    } finally {
+      // didChangeAppLifecycleState handles the re-check and clears _isChecking
+      // on resume. This finally only fires if the intent returned synchronously
+      // or threw, so we don't double-clear — the observer will overwrite anyway.
+      if (mounted) setState(() => _isChecking = false);
     }
-    await Future.delayed(const Duration(seconds: 2));
-    await _checkPermissions();
-    setState(() => _isChecking = false);
   }
 
   bool get _allGranted =>
@@ -127,12 +147,22 @@ class _PermissionScreenState extends State<PermissionScreen> {
             ),
           ),
 
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
+SafeArea(
+  child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 28),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(), // Keeps the premium UI feel
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              // Forces the Column to take up at least the full height of the viewport
+              minHeight: constraints.maxHeight,
+            ),
+            child: IntrinsicHeight(
               child: Column(
                 children: [
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 40), // Slightly reduced from 60 to give breathability
 
                   // Icon
                   GlassContainer(
@@ -160,7 +190,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                       )
                       .fadeIn(duration: 400.ms),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32), // Reduced from 40
 
                   // Title
                   Text(
@@ -213,7 +243,9 @@ class _PermissionScreenState extends State<PermissionScreen> {
                       .fadeIn(delay: 400.ms, duration: 500.ms)
                       .slideY(begin: 0.2, delay: 400.ms),
 
+                  // The Spacer still works on large screens thanks to IntrinsicHeight
                   const Spacer(),
+                  const SizedBox(height: 24), // Gives guaranteed padding above status box
 
                   // Permission status
                   AnimatedSwitcher(
@@ -294,11 +326,16 @@ class _PermissionScreenState extends State<PermissionScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24), // Reduced from 40 to prevent bottom clipping
                 ],
               ),
             ),
           ),
+        );
+      },
+    ),
+  ),
+),
         ],
       ),
     );

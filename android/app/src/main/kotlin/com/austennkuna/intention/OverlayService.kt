@@ -30,6 +30,8 @@ class OverlayService : Service() {
         const val EXTRA_APP_NAME = "app_name"
         const val EXTRA_APP_PACKAGE = "app_package"
         const val EXTRA_OVERRIDE_COUNT = "override_count"
+        const val EXTRA_SHOW_OVERRIDE_COUNT = "show_override_count"
+        const val EXTRA_POSITIVE_FRAMING = "positive_framing"
         const val CHANNEL_ID = "intention_overlay"
 
         var isRunning = false
@@ -45,6 +47,8 @@ class OverlayService : Service() {
     private var appName = ""
     private var packageName = ""
     private var overrideCount = 0
+    private var showOverrideCount = true
+    private var positiveFraming = true
 
     // Tier wait times in milliseconds
     private val waitTimes = listOf(5000L, 15000L, 60000L)
@@ -61,6 +65,8 @@ class OverlayService : Service() {
         appName = intent?.getStringExtra(EXTRA_APP_NAME) ?: "App"
         packageName = intent?.getStringExtra(EXTRA_APP_PACKAGE) ?: ""
         overrideCount = intent?.getIntExtra(EXTRA_OVERRIDE_COUNT, 0) ?: 0
+        showOverrideCount = intent?.getBooleanExtra(EXTRA_SHOW_OVERRIDE_COUNT, true) ?: true
+        positiveFraming = intent?.getBooleanExtra(EXTRA_POSITIVE_FRAMING, true) ?: true
 
         showOverlay()
         return START_NOT_STICKY
@@ -238,6 +244,7 @@ class OverlayService : Service() {
             setTextColor(getTimerColor())
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 32)
+            visibility = if (showOverrideCount) View.VISIBLE else View.GONE
         }
 
         // Start countdown
@@ -349,15 +356,23 @@ class OverlayService : Service() {
         return when (overrideCount) {
             0 -> "Take a breath"
             1 -> "Pause & reflect"
-            else -> "Are you sure?"
+            else -> if (positiveFraming) "You're still in control" else "Are you sure?"
         }
     }
 
     private fun getTierMessage(): String {
-        return when (overrideCount) {
-            0 -> "You've reached your limit for $appName.\nTake a moment before continuing."
-            1 -> "This is your second override today.\nIs this how you want to spend your time?"
-            else -> "You've overridden your limit multiple times.\nPlease state your intention clearly."
+        return if (positiveFraming) {
+            when (overrideCount) {
+                0 -> "You set this limit intentionally.\nTake a moment before you continue."
+                1 -> "You're choosing to override again.\nIs this aligned with your intentions?"
+                else -> "Your focus is worth protecting.\nPlease state your intention below."
+            }
+        } else {
+            when (overrideCount) {
+                0 -> "You've reached your limit for $appName.\nTake a moment before continuing."
+                1 -> "This is your second override today.\nIs this how you want to spend your time?"
+                else -> "You've overridden your limit multiple times.\nPlease state your intention clearly."
+            }
         }
     }
 
