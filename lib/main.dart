@@ -54,12 +54,19 @@ Future<void> _syncUsage() async {
 
   final savedDate = prefs.getString('last_sync_date') ?? '';
   if (savedDate.isNotEmpty && savedDate != todayStr) {
-    debugPrint('UsageSync: new day ($todayStr) — resetting all usage to 0');
+    debugPrint('UsageSync: new day ($todayStr) — saving yesterday then resetting');
+
+    // Save yesterday's final snapshot BEFORE resetting
+    await repo.saveTodayUsage();
+    debugPrint('UsageSync: yesterday snapshot saved for $savedDate');
+
+    // Reset everything to 0
     for (final app in limits) {
       await repo.updateAppLimit(
         app.copyWith(usedMinutesToday: 0, overrideCount: 0),
       );
     }
+    debugPrint('UsageSync: usage reset for new day');
   }
   await prefs.setString('last_sync_date', todayStr);
 
