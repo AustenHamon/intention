@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'core/services/trigger_service.dart';
@@ -31,31 +32,48 @@ void main() async {
   runApp(const IntentionApp());
 }
 
-// Sync real usage to DB every 2 minutes so TriggerService always has fresh data
 void _startUsageSync() {
+  _syncUsage();
   Timer.periodic(const Duration(minutes: 2), (_) async {
-    final repo = AppLimitsRepository();
-    final limits = await repo.getAppLimits();
-    if (limits.isEmpty) return;
-
-    final hasPermission = await UsageStatsService.hasPermission();
-    if (!hasPermission) return;
-
-    final packages = limits.map((a) => a.packageName).toList();
-    final realUsage = await UsageStatsService.getUsageForPackages(packages);
-
-    for (final app in limits) {
-      final updated = app.copyWith(
-        usedMinutesToday: realUsage[app.packageName] ?? 0,
-      );
-      await repo.updateAppLimit(updated);
-    }
-
-    // Save daily snapshot for historical stats
-    await repo.saveTodayUsage();
-
-    debugPrint('UsageSync: updated ${limits.length} apps');
+    await _syncUsage();
   });
+}
+
+Future<void> _syncUsage() async {
+  final prefs = await SharedPreferences.getInstance();
+  final repo = AppLimitsRepository();
+  final limits = await repo.getAppLimits();
+  if (limits.isEmpty) return;
+
+  final hasPermission = await UsageStatsService.hasPermission();
+  if (!hasPermission) return;
+
+  final today = DateTime.now();
+  final todayStr =
+      '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+  final savedDate = prefs.getString('last_sync_date') ?? '';
+  if (savedDate.isNotEmpty && savedDate != todayStr) {
+    debugPrint('UsageSync: new day ($todayStr) — resetting all usage to 0');
+    for (final app in limits) {
+      await repo.updateAppLimit(
+        app.copyWith(usedMinutesToday: 0, overrideCount: 0),
+      );
+    }
+  }
+  await prefs.setString('last_sync_date', todayStr);
+
+  final packages = limits.map((a) => a.packageName).toList();
+  final realUsage = await UsageStatsService.getUsageForPackages(packages);
+
+  for (final app in limits) {
+    await repo.updateAppLimit(
+      app.copyWith(usedMinutesToday: realUsage[app.packageName] ?? 0),
+    );
+  }
+
+  await repo.saveTodayUsage();
+  debugPrint('UsageSync: updated ${limits.length} apps — $todayStr');
 }
 
 class IntentionApp extends StatelessWidget {
