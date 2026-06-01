@@ -82,6 +82,7 @@ class TriggerService {
     final prefs = await SharedPreferences.getInstance();
     final showOverrideCount = prefs.getBool('show_override_count') ?? true;
     final positiveFraming = prefs.getBool('positive_framing') ?? true;
+    final strictMode = prefs.getBool('strict_mode') ?? false;
 
     try {
       await _overlayChannel.invokeMethod('showOverlay', {
@@ -90,6 +91,7 @@ class TriggerService {
         'overrideCount': overrideCount,
         'showOverrideCount': showOverrideCount,
         'positiveFraming': positiveFraming,
+        'strictMode': strictMode,
       });
 
       // Safety net reset after longest tier + buffer

@@ -117,6 +117,7 @@ class MainActivity : FlutterActivity() {
                     val overrideCount = call.argument<Int>("overrideCount") ?: 0
                     val showOverrideCount = call.argument<Boolean>("showOverrideCount") ?: true
                     val positiveFraming = call.argument<Boolean>("positiveFraming") ?: true
+                    val strictMode = call.argument<Boolean>("strictMode") ?: false
 
                     if (Settings.canDrawOverlays(this)) {
                         val intent = Intent(this, OverlayService::class.java).apply {
@@ -125,6 +126,7 @@ class MainActivity : FlutterActivity() {
                             putExtra(OverlayService.EXTRA_OVERRIDE_COUNT, overrideCount)
                             putExtra(OverlayService.EXTRA_SHOW_OVERRIDE_COUNT, showOverrideCount)
                             putExtra(OverlayService.EXTRA_POSITIVE_FRAMING, positiveFraming)
+                            putExtra(OverlayService.EXTRA_STRICT_MODE, strictMode)
                         }
                         startForegroundService(intent)
                         result.success(true)

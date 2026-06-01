@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -17,45 +16,17 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
-    with WidgetsBindingObserver {
+class _SettingsScreenState extends State<SettingsScreen> {
   bool _strictMode = false;
   bool _dailyReminder = true;
   bool _showOverrideCount = true;
   bool _positiveFraming = true;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
 
-  static final _adminChannel =
-      MethodChannel('com.austennkuna.intention/accessibility');
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _loadPreferences();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _checkAdminState();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  Future<void> _checkAdminState() async {
-    try {
-      final isActive =
-          await _adminChannel.invokeMethod<bool>('isDeviceAdminActive') ??
-              false;
-      if (mounted) {
-        setState(() => _strictMode = isActive);
-        _savePref('strict_mode', isActive);
-      }
-    } catch (_) {}
   }
 
   Future<void> _loadPreferences() async {
@@ -201,24 +172,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                         icon: FontAwesomeIcons.lock,
                         title: 'Strict Mode',
                         subtitle:
-                            'Prevents uninstalling the app without disabling first',
+                            'Increases cooling ladder wait times for stronger friction',
                         value: _strictMode,
                         onChanged: (val) async {
-                          if (val) {
-                            final messenger = ScaffoldMessenger.of(context);
-                            await _adminChannel
-                                .invokeMethod('activateDeviceAdmin');
-                            if (mounted) {
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Follow the system prompt to enable Strict Mode'),
-                                  duration: Duration(seconds: 3),
-                                ),
-                              );
-                            }
-                            // Toggle updates via didChangeAppLifecycleState on return
-                          } else {
+                          if (!val) {
                             final confirmed = await showDialog<bool>(
                               context: context,
                               builder: (ctx) => AlertDialog(
@@ -226,7 +183,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 title: const Text('Disable Strict Mode?',
                                     style: TextStyle(color: Colors.white)),
                                 content: const Text(
-                                  'The app can be uninstalled once Strict Mode is off.',
+                                  'Cooling ladder wait times will return to normal.',
                                   style: TextStyle(color: Colors.white70),
                                 ),
                                 actions: [
@@ -245,13 +202,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 ],
                               ),
                             );
-                            if (confirmed == true) {
-                              await _adminChannel
-                                  .invokeMethod('deactivateDeviceAdmin');
-                              setState(() => _strictMode = false);
-                              _savePref('strict_mode', false);
-                            }
+                            if (confirmed != true) return;
                           }
+                          setState(() => _strictMode = val);
+                          _savePref('strict_mode', val);
                         },
                         accentColor: AppColors.dangerRed,
                         delay: 100,

@@ -32,6 +32,7 @@ class OverlayService : Service() {
         const val EXTRA_OVERRIDE_COUNT = "override_count"
         const val EXTRA_SHOW_OVERRIDE_COUNT = "show_override_count"
         const val EXTRA_POSITIVE_FRAMING = "positive_framing"
+        const val EXTRA_STRICT_MODE = "strict_mode"
         const val CHANNEL_ID = "intention_overlay"
 
         var isRunning = false
@@ -50,8 +51,8 @@ class OverlayService : Service() {
     private var showOverrideCount = true
     private var positiveFraming = true
 
-    // Tier wait times in milliseconds
-    private val waitTimes = listOf(5000L, 15000L, 60000L)
+    // Tier wait times in milliseconds (doubled in strict mode)
+    private var waitTimes = listOf(5000L, 15000L, 60000L)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -67,6 +68,8 @@ class OverlayService : Service() {
         overrideCount = intent?.getIntExtra(EXTRA_OVERRIDE_COUNT, 0) ?: 0
         showOverrideCount = intent?.getBooleanExtra(EXTRA_SHOW_OVERRIDE_COUNT, true) ?: true
         positiveFraming = intent?.getBooleanExtra(EXTRA_POSITIVE_FRAMING, true) ?: true
+        val strictMode = intent?.getBooleanExtra(EXTRA_STRICT_MODE, false) ?: false
+        waitTimes = if (strictMode) listOf(10000L, 30000L, 120000L) else listOf(5000L, 15000L, 60000L)
 
         showOverlay()
         return START_NOT_STICKY
@@ -102,6 +105,8 @@ class OverlayService : Service() {
         val context = this
         val waitTime = waitTimes.getOrElse(overrideCount) { waitTimes.last() }
         val waitSeconds = (waitTime / 1000).toInt()
+        val isStrictMode = waitTimes[0] == 10000L
+        val isHardBlocked = isStrictMode && overrideCount >= 2
 
         // Root layout
         val root = LinearLayout(context).apply {
@@ -118,7 +123,6 @@ class OverlayService : Service() {
             background = bg
         }
 
-        // App emoji / icon placeholder
         val emojiText = TextView(context).apply {
             text = getAppEmoji()
             textSize = 56f
@@ -126,9 +130,8 @@ class OverlayService : Service() {
             setPadding(0, 0, 0, 32)
         }
 
-        // Title
         val title = TextView(context).apply {
-            text = getTierTitle()
+            text = if (isHardBlocked) "Blocked for today" else getTierTitle()
             textSize = 28f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
@@ -136,17 +139,17 @@ class OverlayService : Service() {
             setPadding(0, 0, 0, 16)
         }
 
-        // Subtitle
         val subtitle = TextView(context).apply {
-            text = getTierMessage()
+            text = if (isHardBlocked)
+                "You've hit your limit too many times today.\nCome back tomorrow."
+            else getTierMessage()
             textSize = 16f
             setTextColor(Color.parseColor("#B3FFFFFF"))
             gravity = Gravity.CENTER
-            setLineSpacing(0f, 1.4f)
+            lineSpacingMultiplier = 1.4f
             setPadding(40, 0, 40, 48)
         }
 
-        // Timer container
         val timerContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -159,17 +162,16 @@ class OverlayService : Service() {
             setPadding(80, 60, 80, 60)
         }
 
-        // Timer text
         val timerText = TextView(context).apply {
-            text = "$waitSeconds"
-            textSize = 64f
+            text = if (isHardBlocked) "🔒" else "$waitSeconds"
+            textSize = if (isHardBlocked) 48f else 64f
             setTextColor(getTimerColor())
             gravity = Gravity.CENTER
             typeface = android.graphics.Typeface.DEFAULT_BOLD
         }
 
         val timerLabel = TextView(context).apply {
-            text = "seconds"
+            text = if (isHardBlocked) "blocked" else "seconds"
             textSize = 14f
             setTextColor(Color.parseColor("#66FFFFFF"))
             gravity = Gravity.CENTER
@@ -177,21 +179,21 @@ class OverlayService : Service() {
 
         timerContainer.addView(timerText)
         timerContainer.addView(timerLabel)
-        
-        // Progress bar
-         val progressBar = ProgressBar(
+
+        val progressBar = ProgressBar(
             context, null,
             android.R.attr.progressBarStyleHorizontal
-         )
-         progressBar.max = waitSeconds
-         progressBar.progress = waitSeconds
-         progressBar.progressDrawable?.setColorFilter(
-             getTimerColor(),
-             android.graphics.PorterDuff.Mode.SRC_IN
-         )
-         progressBar.setPadding(0, 40, 0, 40)
+        )
+        progressBar.max = waitSeconds
+        progressBar.progress = waitSeconds
+        progressBar.progressDrawable?.setColorFilter(
+            getTimerColor(),
+            android.graphics.PorterDuff.Mode.SRC_IN
+        )
+        progressBar.setPadding(0, 40, 0, 40)
+        if (isHardBlocked) progressBar.visibility = View.GONE
 
-        // Intention input (for tier 2+)
+        val showIntentionInput = if (isStrictMode) true else overrideCount >= 1
         val intentionInput = android.widget.EditText(context).apply {
             hint = "Why do you need this right now?"
             setHintTextColor(Color.parseColor("#66FFFFFF"))
@@ -204,16 +206,15 @@ class OverlayService : Service() {
             }
             background = bg
             setPadding(40, 32, 40, 32)
-            visibility = if (overrideCount >= 1) View.VISIBLE else View.GONE
+            visibility = if (showIntentionInput && !isHardBlocked) View.VISIBLE else View.GONE
         }
 
-        // Proceed button
         val proceedBtn = Button(context).apply {
-            text = "Please wait..."
+            text = if (isHardBlocked) "Blocked" else "Please wait..."
             isEnabled = false
-            alpha = 0.5f
+            alpha = if (isHardBlocked) 0.4f else 0.5f
             val bg = GradientDrawable().apply {
-                setColor(getTimerColor())
+                setColor(if (isHardBlocked) Color.parseColor("#55FF0000") else getTimerColor())
                 cornerRadius = 40f
             }
             background = bg
@@ -223,7 +224,6 @@ class OverlayService : Service() {
             setPadding(60, 32, 60, 32)
         }
 
-        // Exit button
         val exitBtn = Button(context).apply {
             text = "Go back to home"
             val bg = GradientDrawable().apply {
@@ -235,11 +235,12 @@ class OverlayService : Service() {
             setTextColor(Color.parseColor("#80FFFFFF"))
             textSize = 16f
             setPadding(60, 28, 60, 28)
+            visibility = if (isStrictMode && !isHardBlocked) View.GONE else View.VISIBLE
         }
 
-        // Override count badge
         val overrideBadge = TextView(context).apply {
-            text = "Override ${overrideCount + 1}"
+            text = if (isStrictMode) "⚠️ STRICT MODE — Override ${overrideCount + 1}"
+                   else "Override ${overrideCount + 1}"
             textSize = 12f
             setTextColor(getTimerColor())
             gravity = Gravity.CENTER
@@ -247,48 +248,51 @@ class OverlayService : Service() {
             visibility = if (showOverrideCount) View.VISIBLE else View.GONE
         }
 
-        // Start countdown
-        countDownTimer = object : CountDownTimer(waitTime, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                val secondsLeft = (millisUntilFinished / 1000).toInt()
-                timerText.text = "$secondsLeft"
-                progressBar.progress = secondsLeft
-            }
-
-            override fun onFinish() {
-                timerText.text = "0"
-                progressBar.progress = 0
-
-                // Show appropriate next step
-                if (overrideCount >= 1) {
-                    intentionInput.visibility = View.VISIBLE
-                    proceedBtn.text = "Open $appName"
-                    proceedBtn.isEnabled = true
-                    proceedBtn.alpha = 1.0f
-                } else {
-                    proceedBtn.text = "Open $appName"
-                    proceedBtn.isEnabled = true
-                    proceedBtn.alpha = 1.0f
+        if (!isHardBlocked) {
+            countDownTimer = object : CountDownTimer(waitTime, 1000) {
+                override fun onTick(millisUntilFinished: Long) {
+                    val secondsLeft = (millisUntilFinished / 1000).toInt()
+                    timerText.text = "$secondsLeft"
+                    progressBar.progress = secondsLeft
                 }
 
-                // Pulse animation on button
-                val pulse = AlphaAnimation(0.6f, 1.0f).apply {
-                    duration = 500
-                    repeatCount = 2
-                    repeatMode = Animation.REVERSE
+                override fun onFinish() {
+                    timerText.text = "0"
+                    progressBar.progress = 0
+                    if (isStrictMode) {
+                        intentionInput.visibility = View.VISIBLE
+                        proceedBtn.text = "State your intention to continue"
+                        proceedBtn.isEnabled = true
+                        proceedBtn.alpha = 0.7f
+                    } else {
+                        proceedBtn.text = "Open $appName"
+                        proceedBtn.isEnabled = true
+                        proceedBtn.alpha = 1.0f
+                    }
+                    val pulse = AlphaAnimation(0.6f, 1.0f).apply {
+                        duration = 500
+                        repeatCount = 2
+                        repeatMode = Animation.REVERSE
+                    }
+                    proceedBtn.startAnimation(pulse)
                 }
-                proceedBtn.startAnimation(pulse)
-            }
-        }.start()
+            }.start()
+        }
 
-        // Button listeners
         proceedBtn.setOnClickListener {
-            // Check intention input if required
-            if (overrideCount >= 1 && intentionInput.text.toString().trim().length < 5) {
-                intentionInput.error = "Please state your intention (min 5 chars)"
-                return@setOnClickListener
+            if (isHardBlocked) return@setOnClickListener
+            val requiresIntention = if (isStrictMode) true else overrideCount >= 1
+            if (requiresIntention) {
+                val intentionText = intentionInput.text.toString().trim()
+                if (intentionText.length < 10) {
+                    intentionInput.visibility = View.VISIBLE
+                    intentionInput.error = if (isStrictMode && overrideCount == 0)
+                        "Strict mode: state your intention clearly (min 10 chars)"
+                    else
+                        "Please state your intention (min 5 chars)"
+                    return@setOnClickListener
+                }
             }
-            // Launch the monitored app
             val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
             launchIntent?.let {
                 it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -298,7 +302,6 @@ class OverlayService : Service() {
         }
 
         exitBtn.setOnClickListener {
-            // Go back to home screen
             val homeIntent = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -307,7 +310,6 @@ class OverlayService : Service() {
             removeOverlay()
         }
 
-        // Assemble layout
         val buttonContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -353,25 +355,33 @@ class OverlayService : Service() {
     }
 
     private fun getTierTitle(): String {
-        return when (overrideCount) {
-            0 -> "Take a breath"
-            1 -> "Pause & reflect"
-            else -> if (positiveFraming) "You're still in control" else "Are you sure?"
+        return if (positiveFraming) {
+            when (overrideCount) {
+                0 -> "Take a breath"
+                1 -> "Pause & reflect"
+                else -> "Are you sure?"
+            }
+        } else {
+            when (overrideCount) {
+                0 -> "Limit reached"
+                1 -> "Second override"
+                else -> "Multiple overrides"
+            }
         }
     }
 
     private fun getTierMessage(): String {
         return if (positiveFraming) {
             when (overrideCount) {
-                0 -> "You set this limit intentionally.\nTake a moment before you continue."
-                1 -> "You're choosing to override again.\nIs this aligned with your intentions?"
-                else -> "Your focus is worth protecting.\nPlease state your intention below."
-            }
-        } else {
-            when (overrideCount) {
                 0 -> "You've reached your limit for $appName.\nTake a moment before continuing."
                 1 -> "This is your second override today.\nIs this how you want to spend your time?"
                 else -> "You've overridden your limit multiple times.\nPlease state your intention clearly."
+            }
+        } else {
+            when (overrideCount) {
+                0 -> "Daily limit reached for $appName.\nYou must wait before continuing."
+                1 -> "You have overridden your limit twice today."
+                else -> "Limit overridden ${overrideCount + 1} times today."
             }
         }
     }
