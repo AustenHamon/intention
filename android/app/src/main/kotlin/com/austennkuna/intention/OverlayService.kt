@@ -146,7 +146,7 @@ class OverlayService : Service() {
             textSize = 16f
             setTextColor(Color.parseColor("#B3FFFFFF"))
             gravity = Gravity.CENTER
-            lineSpacingMultiplier = 1.4f
+            setLineSpacing(0f, 1.4f)
             setPadding(40, 0, 40, 48)
         }
 
